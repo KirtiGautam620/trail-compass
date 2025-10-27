@@ -28,10 +28,13 @@ export default function CompassScreen({ navigation }) {
     let mounted = true;
 
     const askForPermission = async () => {
+      const l=await Location.requestForegroundPermissionsAsync()
       // TODO a) Ask for location permission
 
       // TODO b) Get One-time position and save the coordinates
-
+      const c=await Location.getCurrentPositionAsync()
+      const {longitude,latitude}=c.coords
+      setCoords({longitude,latitude})
       //* (GIVEN): Heading watcher (0..360 degrees)
       headingSub = await Location.watchHeadingAsync(({ trueHeading }) => {
         if (!mounted) return;
@@ -92,28 +95,58 @@ export default function CompassScreen({ navigation }) {
   };
 
   const dropPin = async () => {
+   
     if (!coords) {
       setSnack("No GPS fix yet");
       return;
     }
     // TODO(2): push new pin {id, lat, lon, heading, ts} to state and savePins(next)
-    setSnack("TODO: save pin");
+    const pin={id: nowISO(),lat:coords.latitude,lon:coords.longitude,heading:pointsForHeading(),ts:nowISO()}
+    try{
+      const next = [...pins,pin]
+      setPins(next)
+
+      await savePins(next)
+      
+      setSnack("TODO: save pin");
+    }
+    catch(e){
+      console.log(e);
+      
+    }
+
   };
 
   const copyCoords = async () => {
-    if (!coords) {
-      setSnack("TODO: copy coords");
-      return;
+    try {
+      
+      if (!coords) {
+        setSnack("TODO: copy coords");
+        return;
+      }
+      
+      // TODO(3): Clipboard.setStringAsync("lat, lon") then snackbar
+      const coppy= await Clipboard.setStringAsync(`lat ${coords.latitude},long ${coords.longitude}`)
+      // console.log(coppy);
+      
+      setSnack("TODO: copy")
+    } 
+    catch (error) {
+      console.log(error);
+      
     }
-    // TODO(3): Clipboard.setStringAsync("lat, lon") then snackbar
   };
 
   const shareCoords = async () => {
+    // console.log(coords)
     if (!coords) {
       setSnack("TODO: share");
       return;
     }
     // TODO(4): Share.share with message including coords + heading + cardinal
+    const sharee= await Share.share({
+      message:`${coords.latitude},${coords.longitude},${heading}`
+    })
   };
 
   // Make DARK end point opposite heading: add 180°
@@ -143,7 +176,7 @@ export default function CompassScreen({ navigation }) {
                 style={styles.gradient}
               />
             </Animated.View>
-
+            
             <Text variant="displaySmall" style={styles.headingText}>
               {heading != null ? `${Math.round(heading)}°` : "—"}
             </Text>
